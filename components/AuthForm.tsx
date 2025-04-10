@@ -1,22 +1,30 @@
 "use client"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
 
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Form } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import Link from "next/link"
-import { toast } from "sonner"
-import FormField from "./FormField"
-import { useRouter } from "next/navigation"
+import { z } from "zod";
+import Link from "next/link";
+import Image from "next/image";
+import { toast } from "sonner";
+import { auth } from "@/firebase/client";
+import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+
+import { Form } from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+
+import { signIn, signUp } from "@/lib/actions/auth.action";
+import FormField from "./FormField";
 
 const authFormSchema = (type: FormType) => {
   return z.object({
     name: type === 'sign-up' ? z.string().min(3).max(20) : z.string().optional(),
     email: z.string().email(),
-    password: z.string().min(8).max(20),
+    password: z.string().min(5).max(20),
   })
 }
 
@@ -33,15 +41,46 @@ const AuthForm = ({ type }: { type: FormType }) => {
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
+    console.log('Chamou a função', data)
+
     try {
       if (type === 'sign-up') {
-        console.log('SIGN UP', values)
-        toast.success("Account created successfully!")
+
+        const { name, email, password } = data
+        const userCredentials = await createUserWithEmailAndPassword(auth, email, password)
+
+        const result = await signUp({
+          uid: userCredentials.user.uid,
+          name: name!,
+          email,
+          password
+        })
+
+        if (!result?.success) {
+          toast.error(result?.message)
+          return
+        }
+
+        toast.success("Account created successfully. Please sign in.")
         router.push('/sign-in')
 
       } else {
-        console.log('SIGN IN', values)
+        const { email, password } = data
+        const userCredential = await signInWithEmailAndPassword(auth, email, password)
+
+        const idToken = await userCredential.user.getIdToken()
+
+        if (!idToken) {
+          toast.error("Sign in failed.")
+          return
+        }
+
+        await signIn({
+          email,
+          idToken
+        })
+
         toast.success("Logged in successfully!")
         router.push('/')
       }
@@ -87,7 +126,7 @@ const AuthForm = ({ type }: { type: FormType }) => {
               control={form.control}
               name="password"
               label="Password"
-              placeholder="********"
+              placeholder="Enter your password"
               type="password"
             />
             <Button type="submit" className="btn">{isSignIn ? 'Sign in' : 'Create an Account'}</Button>
