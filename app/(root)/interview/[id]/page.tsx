@@ -3,9 +3,12 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getRandomInterviewCover } from "@/lib/utils";
 import DisplayTechIcons from "@/components/DisplayTechIcons";
+import Agent from "@/components/Agent";
+import { getCurrentUser } from "@/lib/actions/auth.action";
 
 const Page = async ({ params }: RouteParams) => {
   const { id } = await params;
+  const user = await getCurrentUser()
   const interview = await getInterviewById(id);
 
   if (!interview) redirect('/');
@@ -24,6 +27,13 @@ const Page = async ({ params }: RouteParams) => {
 
         <p className="bg-dark-200 px-4 py-2 rounded-lg h-fit capitalize">{interview.type}</p>
       </div>
+
+      <Agent
+        userName={user?.name!}
+        type={user?.id}
+        interviewId={id}
+        questions={interview.questions}
+      />
     </>
   );
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { interviewer } from "@/constants";
 import { cn } from "@/lib/utils";
 import { vapi } from "@/lib/vapi.sdk";
 import Image from "next/image";
@@ -33,6 +34,18 @@ const Agent = ({ userName, userId, type, interviewId, questions }: AgentProps) =
         variableValues: {
           username: userName,
           userid: userId,
+        }
+      })
+    } else {
+      let formattedQuestions = '';
+
+      if (questions) {
+        formattedQuestions = questions.map((question) => `-${question}`).join('\n')
+      }
+
+      await vapi.start(interviewer, {
+        variableValues: {
+          questions: formattedQuestions
         }
       })
     }
